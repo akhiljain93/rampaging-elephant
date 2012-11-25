@@ -4,9 +4,9 @@
     <tbody>
         {{for i in range(0,10):}}
             {{if i%2==0:}}
-            {{=TR(abeo[i]['topic'],abeo[i]['score'])}}
+            {{=TR(topics[i],scores[i])}}
             {{else:}}
-            {{=TR(abeo[i]['topic'],abeo[i]['score'],_class="blue_row")}}
+            {{=TR(topics[i],scores[i],_class="blue_row")}}
             {{pass}}
         {{pass}}
     </tbody>
