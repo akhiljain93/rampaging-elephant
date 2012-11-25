@@ -1,0 +1,235 @@
+{{import datetime}}
+{{import time}}
+<!-- Extent layout -->
+{{extend 'dash_layout.html'}}
+<!-- Heading -->
+{{block head_}}
+<h2>Dashboard</h2>
+{{end}}
+
+<div style="display:inline-block;width:1150px">
+    <div id='timeline' class='gadgets'>{{=IMG(_src=URL('static','images/snaps/timeline.png'))}}</div>
+    <div id='t_topics' class='gadgets'><div id="t_ajaxy"></div>
+        <select id="t_list" style="width:260px  ">
+            <option value=" ">All Over</option>
+            <option value="Agartha">Agartha</option>
+            <option value="Alfheim">Alfheim</option>
+            <option value="Asgard">Asgard</option>
+            <option value="Avalon">Avalon</option>
+            <option value="Camelot">Camelot</option>
+            <option value="Cockaigne">Cockaigne</option>
+            <option value="Hawaiki">Hawaiki</option>
+            <option value="Heaven">Heaven</option>
+            <option value="Hell">Hell</option>
+            <option value="Hyperborea">Hyperborea</option>
+            <option value="Jotunheim">Jotunheim</option>
+            <option value="Lemuria">Lemuria</option>
+            <option value="Meropis">Meropis</option>
+            <option value="Mu">Mu</option>
+            <option value="Niflheim">Niflheim</option>
+            <option value="Nifhel">Niflhel</option>
+            <option value="Tartarus">Tartarus</option>
+            <option value="Utopia">Utopia</option>
+            <option value="Valhalla">Valhalla</option>
+            <option value="1">Cluster 1</option>
+            <option value="2">Cluster 2</option>
+            <option value="3">Cluster 3</option>
+            <option value="4">Cluster 4</option>
+            <option value="5">Cluster 5</option>
+            <option value="6">Cluster 6</option>
+            <option value="7">Cluster 7</option>
+            <option value="8">Cluster 8</option>
+            <option value="9">Cluster 9</option>
+            <option value="10">Cluster 10</option>
+            <option value="11">Cluster 11</option>
+            <option value="12">Cluster 12</option>
+            <option value="13">Cluster 13</option>
+            <option value="14">Cluster 14</option>
+            <option value="15">Cluster 15</option>
+            <option value="16">Cluster 16</option>
+        </select>
+    </div>
+    <script>
+    d2="t_ajaxy";
+    document.getElementById('t_list').onchange=get_trend;
+    jQuery.ajax({type:"POST",url:'/analytics/dash/t_topics', success: function(msg) { if(d2) { if(d2==':eval') eval(msg); else jQuery("#" +d2).html(msg); }  }  });
+    
+    function get_trend(){
+        var filt=this.options[this.selectedIndex].value;
+        jQuery.ajax({
+            type:"POST",
+            url:'/analytics/dash/t_topics/'+filt, 
+            success: function(msg) { 
+                if(d2) { 
+                    if(d2==':eval') eval(msg); 
+                    else jQuery("#" +d2).html(msg); 
+                }  
+            }  
+        });
+    }
+    </script>
+</div>
+
+<div style="display:inline-block;width:1150 px">
+    <!--Top 10-->
+    <div id='top10' class='gadgets'>
+        <div id="ajaxy"></div>
+        From: {{months = ['January','Febuary','March','April','May','June','July','August','September','October','November','December']}}
+            <select id="fsel_day" style="width:60px">
+                <script>
+                    for (var i = 1; i < 32; i++)
+                        jQuery('#fsel_day').append('<option value="'+i+'">'+i+'</option>');
+                    function compute(month, year, id)   {
+                        day = document.getElementById(id.substring(1));
+                        si = day.selectedIndex;
+                        arr = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+                        jQuery(id).html('');
+                        if (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0))
+                            arr[1] = 29;
+                        for (var i = 0; i < arr[month]; i++)
+                            jQuery(id).append('<option value="'+(i+1)+'">'+(i+1)+'</option>');
+                        day.selectedIndex = si;
+                        if (day.selectedIndex == -1)    {
+                            day.selectedIndex = arr[month]-1;
+                        }
+                        return day.selectedIndex+1;
+                    }
+                </script>
+            </select>
+            <select id="fsel_month" style="width:70px">
+                {{for i in range(0,12):}}
+                {{=OPTION(months[i][:3],_value=i+1)}}
+                {{pass}}
+            </select>
+            <select id="fsel_year" style="width:80px">
+                {{=OPTION(2012,_value='2012')}}
+                {{=OPTION(2013,_value='2013')}}
+            </select>
+        <span style="float:right;margin-right:15px">To: 
+            <select id="tsel_day" style="width:60px">
+                {{for i in range(1,32):}}
+                {{=OPTION(i,_value=i)}}
+                {{pass}}
+            </select>
+            <select id="tsel_month" style="width:70px">
+                {{for i in range(0,12):}}
+                {{=OPTION(months[i][:3],_value=i+1)}}
+                {{pass}}
+            </select>
+            <select id="tsel_year" style="width:80px">
+                {{=OPTION(2012,_value='2012')}}
+                {{=OPTION(2013,_value='2013')}}
+            </select>
+        </span>
+        <select id="top_list" style="float:right;margin-right:15px">
+            <option value=" ">All Over</option>
+            <option value="Agartha">Agartha</option>
+            <option value="Alfheim">Alfheim</option>
+            <option value="Asgard">Asgard</option>
+            <option value="Avalon">Avalon</option>
+            <option value="Camelot">Camelot</option>
+            <option value="Cockaigne">Cockaigne</option>
+            <option value="Hawaiki">Hawaiki</option>
+            <option value="Heaven">Heaven</option>
+            <option value="Hell">Hell</option>
+            <option value="Hyperborea">Hyperborea</option>
+            <option value="Jotunheim">Jotunheim</option>
+            <option value="Lemuria">Lemuria</option>
+            <option value="Meropis">Meropis</option>
+            <option value="Mu">Mu</option>
+            <option value="Niflheim">Niflheim</option>
+            <option value="Nifhel">Niflhel</option>
+            <option value="Tartarus">Tartarus</option>
+            <option value="Utopia">Utopia</option>
+            <option value="Valhalla">Valhalla</option>
+            <option value="1">Cluster 1</option>
+            <option value="2">Cluster 2</option>
+            <option value="3">Cluster 3</option>
+            <option value="4">Cluster 4</option>
+            <option value="5">Cluster 5</option>
+            <option value="6">Cluster 6</option>
+            <option value="7">Cluster 7</option>
+            <option value="8">Cluster 8</option>
+            <option value="9">Cluster 9</option>
+            <option value="10">Cluster 10</option>
+            <option value="11">Cluster 11</option>
+            <option value="12">Cluster 12</option>
+            <option value="13">Cluster 13</option>
+            <option value="14">Cluster 14</option>
+            <option value="15">Cluster 15</option>
+            <option value="16">Cluster 16</option>
+        </select>
+        <script>
+            var div="ajaxy";
+            var start_year = 2012;
+            var start_month = 8;
+            var start_day = 1;
+            var end_year = 2013;
+            var end_month = 12;
+            var end_day = 31;
+            document.getElementById('top_list').onchange = ajaxify;
+            function ajaxify(){
+                value = document.getElementById('top_list').options[document.getElementById('top_list').selectedIndex].value;
+                jQuery.ajax({type:"POST",url:'/analytics/dash/top10'+'/'+start_year+'/'+start_month+'/'+start_day+'/'+end_year+'/'+end_month+'/'+end_day+'/'+value,success: function(msg){ 
+                    if(div){ if(div==':eval') eval(msg); 
+                             else jQuery("#" +div).html(msg);} 
+                } });
+            }
+            document.getElementById('fsel_year').onchange=function(){
+                start_day = compute(document.getElementById('fsel_month').selectedIndex, this.selectedIndex + 2012, '#fsel_day');
+                start_year=this.options[this.selectedIndex].value;
+                ajaxify();
+            };
+            document.getElementById('fsel_month').onchange=function(){
+                start_day = compute(this.selectedIndex, document.getElementById('fsel_year').selectedIndex+2012, '#fsel_day');
+                start_month=this.options[this.selectedIndex].value;
+                ajaxify();
+            };
+            document.getElementById('fsel_day').onchange=function(){
+                start_day=this.options[this.selectedIndex].value;
+                ajaxify();
+            };
+            document.getElementById('tsel_year').onchange=function(){
+                end_day = compute(document.getElementById('tsel_month').selectedIndex, this.selectedIndex + 2012, '#tsel_day');
+                end_year=this.options[this.selectedIndex].value;
+                ajaxify();
+            };
+            document.getElementById('tsel_month').onchange=function(){
+                end_day = compute(this.selectedIndex, document.getElementById('tsel_year').selectedIndex+2012, '#tsel_day');
+                end_month=this.options[this.selectedIndex].value;
+                ajaxify();
+            };
+            document.getElementById('tsel_day').onchange=function(){
+                end_day=this.options[this.selectedIndex].value;
+                ajaxify();
+            };
+            ajaxify();
+        </script>
+    <div id="ajaxy"></div>
+        </div>
+
+        <div id='visualization' class='gadgets'>
+            <a href = '/analytics/default/graph'><h3>Network Graph</h3>
+            {{=IMG(_style='margin-left:150px',_src=URL('static','images/snaps/opened2.png'))}}</a>
+            <script>
+                d4="visualization";
+            </script>
+        </div>
+    </div>
+    <script>
+        document.getElementById('fsel_month').selectedIndex=7;
+        document.getElementById('tsel_year').selectedIndex=1;
+        document.getElementById('tsel_month').selectedIndex=11;
+        document.getElementById('tsel_day').selectedIndex=30;
+        d1="timeline";
+            jQuery.ajax({
+                type:"POST",
+                url:'/analytics/dash/timeline/day/all', 
+                success: function(msg) { 
+                    if(d1) { 
+                        if(d1==':eval') eval(msg); 
+                        else jQuery("#" +d1).html(msg); 
+                    }  
+                }  
+            });
+    </script>

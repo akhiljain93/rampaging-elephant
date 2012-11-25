@@ -1,0 +1,326 @@
+<style>
+  #chart {
+    margin-left: -40px;
+    height: 506px;
+  }
+  text {
+    font: 10px sans-serif;
+  }
+  .dot {
+    stroke: #000;
+  }
+  .axis path, .axis line {
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
+  }
+  .label {
+    fill: #777;
+  }
+  .time.label {
+    font: 50px "Helvetica Neue";
+    fill: #abc;
+  }
+  .time.label.active {
+    fill: #aaa;
+  }
+  .time.label.locked  {
+    fill: darkred;
+  }
+  .time.label.locked.active, .time.label.active.locked {
+    fill: #d00;
+  }
+  .overlay.locked {
+    fill:none;
+    pointer-events: all;
+    cursor: pointer;
+  }
+  .overlay {
+    fill: rgba(185,185,185,0.1);
+    pointer-events: all;
+    cursor: ew-resize;
+  }
+</style>
+
+<div id="chart" style="width:auto;float:left;"></div><button onclick="startAnim()" id='play' class="btn">Play</button>
+<script src="{{=URL('static', 'js/d3.v2.js')}}"></script>
+<script>
+  button = d3.select("#play");
+  button.style("float","left").style("margin-top","40px");
+
+  // Various accessors that specify the four dimensions of data to visualize.
+  function x(d) { return d.id; }
+  function y(d) { return d.cumu; }
+  function radius(d) { return Math.max(d.comm, 40); }
+  function color(d) { return d.id; }
+  function key(d) { return d.id; }
+
+  // Chart dimensions.
+  var margin = {top: 19.5, right: 19.5, bottom: 50, left: 80},
+      width = 1050 - margin.right,
+      height = 450 - margin.top - margin.bottom;
+
+  maxv = {{=XML(response.json(cumumax))}};
+
+  cluswise = {{=XML(response.json(cluswise))}};
+
+  // Various scales. These domains make assumptions of data, naturally.
+  if (cluswise) {
+  var xScale = d3.scale.ordinal().rangeBands([0, width]).domain([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]),
+      yScale = d3.scale.linear().domain([0, maxv*1.3]).range([height, 0]),
+      radiusScale = d3.scale.linear().domain([0, 350]).range([0, 40]),
+      colorScale = d3.scale.category20();
+  }
+  else  {
+  var xScale = d3.scale.ordinal().rangeBands([0, width]).domain(["Agartha","Alfheim","Asgard", "Avalon", "Camelot", "Cockaigne", "Hawaiki", "Heaven", "Hell", "Hyperborea", "Jotunheim", "Lemuria", "Meropis", "Mu", "Niflheim", "Nifhel", "Tartarus", "Utopia", "Valhalla"]),
+      yScale = d3.scale.linear().domain([0, maxv*1.3]).range([height, 0]),
+      radiusScale = d3.scale.linear().domain([0, 350]).range([0, 40]),
+      colorScale = d3.scale.category20();
+  }
+
+  // The x & y axes.
+  var xAxis = d3.svg.axis().orient("bottom").scale(xScale).ticks(20, d3.format(",d")),
+      yAxis = d3.svg.axis().scale(yScale).orient("left");
+
+  // Create the SVG container and set the origin.
+  var svg = d3.select("#chart").append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+  // Add the x-axis.
+  svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis);
+
+  // Add the y-axis.
+  svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis);
+
+  // Add an x-axis label.
+  svg.append("text")
+      .attr("class", "x label")
+      .attr("text-anchor", "end")
+      .attr("x", width)
+      .attr("y", height - 6)
+      .text(function()  { return cluswise ? "clusters represented by their ids" : "clusters by locations"; });
+
+  // Add a y-axis label.
+  svg.append("text")
+      .attr("class", "y label")
+      .attr("text-anchor", "end")
+      .attr("y", 6)
+      .attr("dy", ".75em")
+      .attr("transform", "rotate(-90)")
+      .text("volume of communication");
+
+  mint = {{=XML(response.json(mint))}};
+  maxt = {{=XML(response.json(maxt))}};
+  mintimediff = {{=XML(response.json(mintimediff))}}
+
+  // Add the time label; the value is set on transition.
+  var label = svg.append("text")
+      .attr("class", "time label")
+      .attr("text-anchor", "middle")
+      .attr("y", 50)
+      .attr("x", width/2 + margin.left/2)
+      .text(getTime(mint));
+
+  // Load the data.
+  data = {{=XML(response.json(data))}};
+
+  // A bisector since many clusters' data is sparsely-defined.
+  var bisect = d3.bisector(function(d) { return d[0]; });
+
+  // Add a dot per cluster. Initialize the data at mint, and set the colors.
+  var dot = svg.append("g")
+      .attr("class", "dots")
+    .selectAll(".dot")
+      .data(interpolateData(mint))
+    .enter().append("circle")
+      .attr("class", "dot")
+      .style("fill", function(d) { return colorScale(color(d)); })
+      .call(position)
+      .sort(order);
+
+  // Add a tooltip.
+  dot.append("title")
+    .text(function(d) { return 'Current volume of communication: ' + Math.round(d.comm); });
+
+  // Add an overlay for the time label.
+  var box = label.node().getBBox();
+  var overlay = svg.append("rect")
+        .attr("class", "overlay")
+        .attr("x", 20)
+        .attr("y", box.y)
+        .attr("rx",50)
+        .attr("ry",50)
+        .attr("width", width-20)
+        .attr("height", box.height)
+        .on("mouseover", enableInteraction);
+
+  curtime = mint
+
+  // Start a transition that interpolates the data based on time.
+  setTimeout( function()  {
+    button.html("Pause");
+    svg.transition()
+      .duration(30000)
+      .ease("linear")
+      .tween("time", tweenTime)
+      .each("end", enableInteraction) } , 500);
+
+  // Positions the dots based on data.
+  function position(dot) {
+    dot .attr("cx", function(d) { return xScale(x(d)) + xScale.rangeBand()/2; })
+        .attr("cy", function(d) { return yScale(y(d)); })
+        .attr("r", function(d) { return radiusScale(radius(d)); });
+    // Correct the tooltip.
+    dot.select("title")
+      .text(function(d) { return 'Current volume of communication: ' + Math.round(d.comm); });
+  }
+
+  // Defines a sort order so that the smallest dots are drawn on top.
+  function order(a, b) {
+    return radius(b) - radius(a);
+  }
+
+  locked = true;
+  label.classed("locked", locked);
+  overlay.classed("locked", locked);
+
+  // After the transition finishes, you can mouseover to change the time.
+  function enableInteraction() {
+    var timeScale = d3.scale.linear()
+        .domain([mint, maxt])
+        .range([parseInt(overlay.attr('x')), parseInt(overlay.attr('x')) + parseInt(overlay.attr('width'))])
+        .clamp(true);
+    // Cancel the current transition, if any.
+    svg.transition().duration(0);
+    button.html("Play");
+
+    overlay
+        .on("mouseover", mouseover)
+        .on("mouseout", mouseout)
+        .on("mousemove", mousemove)
+        .on("touchmove", mousemove)
+        .on("click", onclick);
+
+    function onclick()  {
+      locked = !locked;
+      label.classed("locked", locked);
+      overlay.classed("locked", locked);
+    }
+
+    function mouseover() {
+      label.classed("active", true);
+    }
+
+    function mouseout() {
+      label.classed("active", false);
+    }
+
+    function mousemove() {
+      if(!locked) {
+        svg.transition().duration(0);
+        button.html("Play");
+        displayTime(timeScale.invert(d3.mouse(this)[0]));
+      }
+    }
+  }
+
+  // Tweens the entire chart by first tweening the time, and then the data.
+  // For the interpolated data, the dots and label are redrawn.
+  function tweenTime() {
+    var time = d3.interpolateNumber(curtime, maxt);
+    return function(t) { displayTime(time(t)); };
+  }
+
+  // Updates the display to show the specified time.
+  function displayTime(time) {
+    dot.data(interpolateData(time), key).call(position).sort(order);
+    label.text(getTime(time));
+    curtime = time;
+  }
+
+  // Interpolates the dataset for the given (fractional) time.
+  function interpolateData(time) {
+    return data.map(function(d) {
+      return {
+        id: d.id,
+        size: d.size,
+        comm: interpolateWithZeroes(d.comm, time),
+        cumu: interpolateValues(d.cumu, time),
+      };
+    });
+  }
+
+  // Finds (and possibly interpolates) the value for the specified time. Takes zero for missing values.
+  function interpolateWithZeroes(values, time) {
+    var i = bisect.left(values, time, 0, values.length - 1),
+        a = values[i];
+    if (i > 0) {
+      var b = values[i - 1];
+      if (time - mintimediff > b[0])
+        b = [time - mintimediff, 0];
+      if (time + mintimediff < a[0] || time - mintimediff > a[0])
+        a = [time + mintimediff, 0];
+      if(a[0] == b[0])
+        return a[1];
+      var t = (time - a[0]) / (b[0] - a[0]);
+      return Math.max(a[1] * (1 - t) + b[1] * t, 0);
+    }
+    return a[1];
+  }
+
+  // Finds (and possibly interpolates) the value for the specified time. This one interpolates even for missing values.
+  function interpolateValues(values, time) {
+    var i = bisect.left(values, time, 0, values.length - 1),
+        a = values[i];
+    if (i > 0) {
+      var b = values[i - 1],
+          t = (time - a[0]) / (b[0] - a[0]);
+      return a[1] * (1 - t) + b[1] * t;
+    }
+    return a[1];
+  }
+
+  function getTime(time)  {
+    time = new Date(Math.round(time));
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    date = months[time.getMonth()] + ' ' + time.getDate();
+    h = time.getHours();
+    if (h.toString().length < 2)
+      h = '0'+h;
+    date += ', ' + h+':';
+    m = time.getMinutes();
+    if (m.toString().length < 2)
+      m = '0'+m;
+    date += m;
+    return date;
+  }
+
+
+  button.html("Pause");
+
+  function startAnim()  {
+    // Cancel the current transition, if any.
+    svg.transition().duration(0);
+
+    if (button.html() == "Play")  {
+      button.html("Pause");
+      duration = 30000*(maxt-curtime)/(maxt-mint);
+      svg.transition()
+        .duration(duration)
+        .ease("linear")
+        .tween("time", tweenTime)
+        .each("end", enableInteraction);
+      setTimeout(function() { button.html("Play"); }, duration);
+    }
+    else
+      button.html("Play");
+  }
+</script>

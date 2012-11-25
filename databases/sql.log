@@ -1,0 +1,143 @@
+timestamp: 2012-11-20T11:51:48.799000
+CREATE TABLE auth_user(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    first_name CHAR(128),
+    last_name CHAR(128),
+    email CHAR(512),
+    password CHAR(512),
+    registration_key CHAR(512),
+    reset_password_key CHAR(512),
+    registration_id CHAR(512)
+);
+success!
+timestamp: 2012-11-20T11:51:48.895000
+CREATE TABLE auth_group(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    role CHAR(512),
+    description TEXT
+);
+success!
+timestamp: 2012-11-20T11:51:48.946000
+CREATE TABLE auth_membership(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER REFERENCES auth_user (id) ON DELETE CASCADE,
+    group_id INTEGER REFERENCES auth_group (id) ON DELETE CASCADE
+);
+success!
+timestamp: 2012-11-20T11:51:48.988000
+CREATE TABLE auth_permission(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    group_id INTEGER REFERENCES auth_group (id) ON DELETE CASCADE,
+    name CHAR(512),
+    table_name CHAR(512),
+    record_id INTEGER
+);
+success!
+timestamp: 2012-11-20T11:51:49.147000
+CREATE TABLE auth_event(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    time_stamp TIMESTAMP,
+    client_ip CHAR(512),
+    user_id INTEGER REFERENCES auth_user (id) ON DELETE CASCADE,
+    origin CHAR(512),
+    description TEXT
+);
+success!
+timestamp: 2012-11-20T11:51:49.202000
+CREATE TABLE auth_cas(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER REFERENCES auth_user (id) ON DELETE CASCADE,
+    created_on TIMESTAMP,
+    service CHAR(512),
+    ticket CHAR(512),
+    renew CHAR(1)
+);
+success!
+timestamp: 2012-11-20T11:51:49.270000
+CREATE TABLE nodes(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    uid INTEGER UNIQUE,
+    location CHAR(512),
+    clusterid INTEGER
+);
+success!
+timestamp: 2012-11-20T11:51:49.313000
+CREATE TABLE edges(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    node1 INTEGER,
+    node2 INTEGER,
+    cledgeid INTEGER,
+    locedgeid INTEGER,
+    totalv INTEGER
+);
+success!
+timestamp: 2012-11-20T11:51:49.358000
+CREATE TABLE cledges(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cluster1 INTEGER,
+    cluster2 INTEGER,
+    totalv INTEGER
+);
+success!
+timestamp: 2012-11-20T11:51:49.401000
+CREATE TABLE locedges(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    loc1 CHAR(512),
+    loc2 CHAR(512),
+    totalv INTEGER
+);
+success!
+timestamp: 2012-11-20T11:51:49.451000
+CREATE TABLE chourwise(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    topic CHAR(512),
+    time INTEGER,
+    volume INTEGER,
+    cledge CHAR(512)
+);
+success!
+timestamp: 2012-11-20T11:51:49.502000
+CREATE TABLE lhourwise(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    topic CHAR(512),
+    time INTEGER,
+    volume INTEGER,
+    locedge CHAR(512)
+);
+success!
+timestamp: 2012-11-20T11:51:49.552000
+CREATE TABLE cdaywise(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    topic CHAR(512),
+    time INTEGER,
+    volume INTEGER,
+    cledge CHAR(512)
+);
+success!
+timestamp: 2012-11-20T11:51:49.581000
+CREATE TABLE ldaywise(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    topic CHAR(512),
+    time INTEGER,
+    volume INTEGER,
+    locedge CHAR(512)
+);
+success!
+timestamp: 2012-11-20T11:51:49.629000
+CREATE TABLE cweekwise(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    topic CHAR(512),
+    time INTEGER,
+    volume INTEGER,
+    cledge CHAR(512)
+);
+success!
+timestamp: 2012-11-20T11:51:49.668000
+CREATE TABLE lweekwise(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    topic CHAR(512),
+    time INTEGER,
+    volume INTEGER,
+    locedge CHAR(512)
+);
+success!

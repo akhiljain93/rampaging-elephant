@@ -1,0 +1,245 @@
+{{extend 'dash_layout.html'}}
+{{block head_}}
+  <h2>Mashup</h2>
+  <button id="button" onclick="intrachange()">Turn Off Intra-Cluster</button>
+{{end}}
+<style>
+    #featured {
+      font-family: "Helvetica Neue", Helvetica, sans-serif;
+      position: relative;
+      width: 840px;
+    }
+    svg {
+      font: 10px sans-serif;
+    }
+    .axis path, .axis line {
+      fill: none;
+      stroke: #000;
+      shape-rendering: crispEdges;
+    }
+    .background {
+      fill: #eee;
+    }
+    line {
+      stroke: #fff;
+    }
+    text.active {
+      fill: red;
+    }
+</style>
+<div id="body">
+  <table>
+    <tr>
+      <td><h3 style="margin-left:80px">Location wise Clustering</h3></td>
+      <td><h3 style="margin-left:80px">Random Walker Clustering</h3></td>
+    </tr>
+    <tr>
+      <td id="feature"></td>
+      <td id="feature2"></td>
+    </tr>
+  </table>
+</div>
+<script src={{=URL('static',"js/d3.v2.min.js")}}></script>
+
+<script>
+  function mashup(cluster){
+    var margin = {top: 80, right: 0, bottom: 10, left: 80},
+        width = 450,
+        height = 450;
+
+    var x = d3.scale.ordinal().rangeBands([0, width]),
+        y = d3.scale.ordinal().rangeBands([0, width]),
+        c = d3.scale.category10().domain(d3.range(100));
+    
+    var v=d3.select("#feature");
+    
+    if (cluster) v= d3.select("#feature2");
+     
+    var svg =v.append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    //true for cluster wise mashup, false for location wise mashup
+    if (cluster){		  
+      {{d=db(db.cledges.id==db.edges.cledgeid).select(db.cledges.cluster1, db.cledges.cluster2, db.edges.totalv.sum(), groupby='edges.cledgeid').as_list()}}
+      {{d=map(lambda x: {'totalv':x['_extra']['SUM(edges.totalv)'], 'cluster1':x['cledges']['cluster1'], 'cluster2':x['cledges']['cluster2']},d)}}
+      data = {{=XML(response.json(d))}}
+      {{locs=db(db.cledges.id>0).select(db.cledges.cluster1,distinct=True)}}
+      locs = {{=XML(response.json(locs))}}
+      field = 'cluster1';
+    }
+
+    else {
+      {{d=db(db.locedges.id==db.edges.locedgeid).select(db.locedges.loc1, db.locedges.loc2, db.edges.totalv.sum(), groupby='edges.locedgeid').as_list()}}
+      {{d=map(lambda x: {'totalv':x['_extra']['SUM(edges.totalv)'], 'cluster1':x['locedges']['loc1'], 'cluster2':x['locedges']['loc2']},d)}}
+      data = {{=XML(response.json(d))}};
+      {{locs=db(db.locedges.id>0).select(db.locedges.loc1,distinct=True)}}
+      locs = {{=XML(response.json(locs))}}; 
+      field = 'loc1';
+    }
+
+      var matrix = [];
+      var grp = [];
+      for (var i=0; i<locs.length; i++){
+        grp[i]=locs[i][field];
+      }
+
+      function findtotal(cl)  {
+        s = 0;
+        for (var i=0; i<data.length; i++)
+          if (data[i]["cluster1"]==cl || data[i]["cluster2"]==cl)
+            s += data[i]["totalv"];
+        return s;
+      }
+
+      function findactual(cl1, cl2)  {
+        if (cl1>cl2)
+          return findactual(cl2,cl1);
+        for (var i=0; i<data.length; i++)
+          if (data[i]["cluster1"]==cl1 && data[i]["cluster2"]==cl2)
+            return data[i]["totalv"];
+      }
+
+      function find(cl1, cl2) {
+        if (cl1>cl2)
+          return find(cl2,cl1);
+        for (var i=0; i<data.length; i++)
+          if (data[i]["cluster1"]==cl1 && data[i]["cluster2"]==cl2)
+            return 2*data[i]["totalv"]/(findtotal(cl1)+findtotal(cl2));
+      }
+  
+      for (var i = 0; i < grp.length; i++) {
+        matrix[i] = [];
+        for (var j = 0; j < grp.length; j++)
+          matrix[i][j] = {cluster1: grp[i], cluster2: grp[j], co: i==j ? (intra ? find(grp[i], grp[j]) : 0) : find(grp[i], grp[j]), vol: i == j ? (intra ? findactual(grp[i], grp[j]) : 0) : findactual(grp[i], grp[j])};
+      }
+      var max = 0, min = Number.MAX_VALUE;
+      for(var i = 0; i < matrix.length; ++i)
+        for(var j = 0; j < matrix[0].length; ++j) {
+          max = Math.max(matrix[i][j].co,max);
+          min = Math.min(matrix[i][j].co,min);
+        }
+      var range = (max-min);
+      for(var i = 0; i < matrix.length; ++i)
+        for(var j = 0; j < matrix[0].length; ++j) {
+            matrix[i][j].z = (matrix[i][j].co - min)/range;
+        }
+      var mtrans = [];
+      for (var i = 0; i < matrix.length; i++)
+        for (var j = 0; j < matrix[0].length; j++)  {
+          if(i == 0)
+            mtrans[j] = [];
+          mtrans[j][i] = matrix[i][j];
+        }
+      var rowData = mtrans, colData = matrix;
+
+      // the axes
+      x.domain(grp);
+      y.domain(grp);
+
+      svg.append("rect")
+          .attr("class", "background")
+          .attr("width", width)
+          .attr("height", height);
+      var row = svg.selectAll(".row")
+          .data(rowData)
+        .enter().append("g")
+          .attr("class", "row")
+          .attr("transform", function(d, i) { return "translate(0," + y(i+1) + ")"; })
+          .each(row);
+
+      row.append("line")
+          .attr("x2", width);
+
+      row.append("text")
+          .attr("x", -6)
+          .attr("y", y.rangeBand() / 2)
+          .attr("dy", ".32em")
+          .attr("text-anchor", "end")
+          .text(function(d, i) { return grp[i]; });
+
+      var column = svg.selectAll(".column")
+          .data(colData)
+        .enter().append("g")
+          .attr("class", "column")
+          .attr("transform", function(d, i) { return "translate(" + x(i+1) + ")rotate(-90)"; });
+
+      column.append("line")
+          .attr("x1", -width);
+
+      column.append("text")
+          .attr("x", 6)
+          .attr("y", x.rangeBand() / 2)
+          .attr("dy", ".32em")
+          .attr("text-anchor", "start")
+          .text(function(d, i) { return grp[i]; });
+
+      function cellcolour(d)  {
+        return d.cluster1 >= d.cluster2 ? "steelblue": "darkred"
+      }
+
+      function row(row) {
+
+        d3.select(this).selectAll(".cell_bkg")
+            .data(row)
+          .enter().append("rect")
+            .attr("class", "cell_bkg")
+            .attr("x", function(d,i) { return x(grp[i]);})
+            .attr("height", y.rangeBand())
+            .attr("width", x.rangeBand())
+            .style("fill","#ccc")
+            .style("fill-opacity", 0)
+            .on("mouseover", mouseover)
+            .on("mouseout", mouseout)
+            .append("title").text(function(d)  {return "Total Volume : " + d.vol + '; Correlation Ratio: ' + Math.round(100*d.co)/100;});
+
+        var min = Number.MAX_VALUE;
+        var max = Number.MIN_VALUE;
+        for (var i=0; i<matrix.length; i++)
+          for (var j=0; j<matrix[i].length; j++){
+            min=Math.min(min, matrix[i][j].vol);
+            max=Math.max(max, matrix[i][j].vol);
+          }
+
+        d3.select(this).selectAll(".cell")
+            .data(row)
+          .enter().append("circle")
+            .attr("class", "cell")
+            .attr("cx", function(d) { return x(d.cluster1) + x.rangeBand()/2; })
+            .attr("cy", y.rangeBand()/2)
+            .attr("r", function(d) {return (d.cluster1 >= d.cluster2 ? d.z : (d.vol-min)/(max-min))*(Math.min(x.rangeBand(),y.rangeBand())/2-1);})
+            .attr("stroke", "black")
+            .style("fill-opacity", function(d) { return d.cluster1 >= d.cluster2 ? (d.vol-min)/(max-min) : d.z; })
+            .style("fill", cellcolour)
+            .on("mouseover", mouseover)
+            .on("mouseout", mouseout)
+            .append("title").text(function(d)  {return "Total Volume : " + d.vol + '; Correlation Ratio: ' + Math.round(100*d.co)/100;});
+      }
+
+      function mouseover(p) {
+        // d3.selectAll(".row text").classed("active", function(d, i) { return i == grp.indexOf(p.cluster2); });
+        // d3.selectAll(".column text").classed("active", function(d, i) { return i == grp.indexOf(p.cluster1); });
+        d3.selectAll(".cell_bkg").transition().duration(375).style("fill-opacity", function(d) { return d.cluster1 == p.cluster1 || d.cluster2 == p.cluster2 ? 0 : 1; } );
+        d3.selectAll(".cell").transition().duration(375).style("fill", function(d) { return d.cluster1 == p.cluster1 || d.cluster2 == p.cluster2 ? cellcolour(d) : "gray"; } );
+      }
+
+      function mouseout() {
+        d3.selectAll("text").classed("active", false);
+        d3.selectAll(".cell_bkg").transition().duration(375).style("fill-opacity", 0);
+        d3.selectAll(".cell").transition().duration(375).style("fill", cellcolour );
+      }
+    }
+    var intra = true;
+    mashup(false);
+    mashup(true);
+
+    function intrachange(){
+      intra=!intra;
+      document.getElementById('button').innerHTML="Turn "+(intra?"Off":"On")+" Intra-Cluster";
+      jQuery('svg').remove();
+      mashup(false);
+      mashup(true);
+    }
+</script>

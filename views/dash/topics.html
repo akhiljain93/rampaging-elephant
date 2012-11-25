@@ -1,0 +1,13 @@
+<div id="topicm"><select id="alltopics"></select></div>
+<script>
+	var s="<select id='alltopics'>";
+	{{if "true" in alltrue:}} 
+		s+='<option value="all">All</option>'; 
+	{{pass}}
+  	{{for row in allstates:}}
+       s+={{=XML(response.json(OPTION(row)))}};
+   	{{pass}}
+   s+= "</select>";
+   document.getElementById('topicm').innerHTML=s;
+</script>
+

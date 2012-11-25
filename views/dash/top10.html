@@ -1,0 +1,22 @@
+<h3>Top 10</h3>
+{{months = ['January','Febuary','March','April','May','June','July','August','September','October','November','December']}}
+<span style="text-align:left">From: <b>{{=start_date[2]}}-{{=months[start_date[1]-1][:3]}}-{{=start_date[0]}}</b></span>
+<span style="float:right;margin-right:15px">To: <b>{{=end_date[2]}}-{{=months[end_date[1]-1][:3]}}-{{=end_date[0]}}</b></span>
+<table>
+    <caption><b style="text-align:left">Topics</b><b style="float:right;">Total Volume</b></caption>
+    <tbody>
+		{{blue=True}}
+        {{for row in db_data:}}
+            {{if blue:}}
+                {{=TR(row.topic, row.volsum)}}
+                {{blue=False}}
+            {{else:}}
+                {{=TR(row.topic, row.volsum,_class="blue_row")}}
+                {{blue=True}}
+            {{pass}}
+        {{pass}}
+    </tbody>
+</table>
+
+
+        

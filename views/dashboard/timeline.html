@@ -1,0 +1,96 @@
+<!-- Extends the basic layout -->
+{{extend 'dash_layout.html'}}
+<!-- Heading -->
+{{block head_}}
+<h2>Timeline</h2>
+{{end}}
+
+<style type="text/css">
+    .r_label {
+        margin-left: 5px;
+        margin-right: 100px;
+        clear: none;
+    }
+</style>
+
+<div id="radio" style="float:left;">
+    <input type="radio" id="radio1" name="radio" checked="checked"/><span class="r_label">All Time</span>
+    <input type="radio" id="radio2" name="radio" /><span class="r_label">Daywise</span>
+    <input type="radio" id="radio3" name="radio" /><span class="r_label">Hourwise</span>
+</div>        
+
+<script>
+    d1="timeline";
+    d2="topics_menu";
+    var current="week";
+    var current_topic="all";
+    function calltopic(){
+        jQuery.ajax({
+            type:"POST",
+            url:'/analytics/dash/topics/'+'c'+current+'wise/true', 
+            success: function(msg) { 
+                if(d2) { 
+                    if(d2==':eval') eval(msg); 
+                    else {
+                        jQuery("#" +d2).html(msg);
+                        var flag=false;
+                        for (var i = 0; i < document.getElementById('alltopics').options.length; i++) {
+                            if (current_topic== document.getElementById('alltopics').options[i].value){
+                                document.getElementById('alltopics').selectedIndex=i; 
+                                ajaxify();
+                                flag=true;
+                                break;
+                            }
+                        };
+                        if (!flag){
+                            document.getElementById('alltopics').selectedIndex=0; 
+                            current_topic="all";
+                            ajaxify();
+                        }
+                        document.getElementById('alltopics').onchange=settopic;
+                    }
+                }
+            }
+        });   
+    }
+    function ajaxify(){
+        jQuery.ajax({
+            type:"POST",
+            url:'/analytics/dash/timeline'+'/'+current+'/'+encodeURIComponent(current_topic), 
+            success: function(msg) {
+                if(d1) { 
+                    if(d1==':eval') eval(msg); 
+                    else jQuery("#" +d1).html(msg); 
+                }  
+            }, 
+            error: function(msg){
+            }  
+        });   
+    }
+    function settopic(){
+        current_topic=this.options[this.selectedIndex].value;
+        calltopic();   
+    }
+    function changespan(){  
+        jQuery.ajax({
+            type:"POST",
+            url:'/analytics/dash/timeline'+'/'+current+'/'+encodeURIComponent(current_topic), 
+            success: function(msg) { 
+                if(d1) { 
+                    if(d1==':eval') eval(msg); 
+                    else jQuery("#" +d1).html(msg); 
+                }  
+            }, 
+            error: function(msg){
+            }  
+        });      
+    }
+    calltopic();
+    document.getElementById('radio1').onchange= function(){current="week";calltopic();};
+    document.getElementById('radio2').onchange= function(){current="day";calltopic();};
+    document.getElementById('radio3').onchange= function(){current="hour";calltopic();};
+    changespan();
+</script>
+
+<div id="topics_menu" style="float:left"></div>
+<div id='timeline' class='gadgets'></div>

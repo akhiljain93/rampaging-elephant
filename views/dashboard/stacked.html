@@ -1,0 +1,77 @@
+{{extend 'dash_layout.html'}}
+{{block head_}}
+<h2>Stacked Area Chart</h2>
+<h3>Comparison of communication on different topics in last 7 days</h3>
+{{end}}
+<link href="{{=URL('static',"css/nvd3.css")}}" rel="stylesheet" type="text/css">
+<style>
+  g.nvd3 legend{
+    display:none;
+  }
+  #body {
+    overflow-y:scroll;
+  }
+  text {
+    font: 12px sans-serif;
+  }
+  #chart, #chart2 {
+    height: 1000px;
+  }
+</style>
+
+<div id='body'>
+<div>
+  <svg id="chart"></svg>
+</div>
+
+<script src="{{=URL('static',"js/d3.v2.js")}}"></script>
+<script src="{{=URL('static',"js/nv.d3.js")}}"></script>
+<script src="{{=URL('static',"js/nvd3src/models/axis.js")}}"></script>
+<script src="{{=URL('static',"js/nvd3src/tooltip.js")}}"></script>
+<script src="{{=URL('static',"js/nvd3src/models/legend.js")}}"></script>
+<script src="{{=URL('static',"js/nvd3src/models/axis.js")}}"></script>
+<script src="{{=URL('static',"js/nvd3src/models/scatter.js")}}"></script>
+<script src="{{=URL('static',"js/nvd3src/models/stackedArea.js")}}"></script>
+<script src="{{=URL('static',"js/nvd3src/models/stackedAreaChart.js")}}"></script>
+
+<script>
+  {{limit=db(db.cdaywise.id>0).select(db.cdaywise.time.max().with_alias('time'),limitby=(0,1)).first().time - 7*3600*24*1000}}
+  {{data=db(db.cdaywise.time>limit).select(db.cdaywise.topic, db.cdaywise.time, db.cdaywise.volume.sum(), groupby='cdaywise.topic,cdaywise.time').as_list()}}
+  {{d=dict()}}
+  {{for rec in data:}}
+  {{d[rec['cdaywise']['topic']] = []}}
+  {{pass}}
+  {{c = 3600*24*1000}}
+  {{for k in d:}}
+    {{for i in range(1,8):}}
+    {{d[k].append([limit+i*c,0])}}
+    {{pass}}
+  {{pass}}
+  {{for rec in data:}}
+    {{d[rec['cdaywise']['topic']][(rec['cdaywise']['time']-limit)/c - 1][1] = rec['_extra']['SUM(cdaywise.volume)']}}
+  {{pass}}
+  {{ret=[]}}
+  {{for k in d:}}
+  {{ret.append({'key':k, 'values':d[k]})}}
+  {{pass}}
+
+  data = {{=XML(response.json(ret))}}
+  nv.addGraph(function() {
+    var chart = nv.models.stackedAreaChart()
+                  .x(function(d) { return d[0] })
+                  .y(function(d) { return d[1] })
+                  .clipEdge(true);
+
+    chart.xAxis
+        .tickFormat(function(d) { return d3.time.format('%x')(new Date(d)) });
+
+    chart.yAxis
+        .tickFormat(d3.format());
+
+    d3.select('#chart')
+      .datum(data)
+        .transition().duration(500).call(chart);
+    nv.utils.windowResize(chart.update);
+    return chart;
+  });
+</script>

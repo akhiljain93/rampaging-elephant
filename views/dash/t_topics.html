@@ -1,0 +1,13 @@
+<h3>Trending Topics</h3>
+<table width="200px">
+    <caption><b>Topics</b><b style="float:right;margin-right:25px">Z-Score</b></caption>
+    <tbody>
+        {{for i in range(0,10):}}
+            {{if i%2==0:}}
+            {{=TR(abeo[i]['topic'],abeo[i]['score'])}}
+            {{else:}}
+            {{=TR(abeo[i]['topic'],abeo[i]['score'],_class="blue_row")}}
+            {{pass}}
+        {{pass}}
+    </tbody>
+</table>

@@ -1,0 +1,3 @@
+#crontab
+
+#*    *       *       *       *       root *default/trycron

@@ -1,0 +1,55 @@
+<!-- Extend the basic layout -->
+{{extend 'dash_layout.html'}}
+<!-- Heading -->
+{{block head_}}
+<h2>Motion Chart</h2>
+{{end}}
+
+<div id="topics_menu" style="float:left">{{=SELECT()}}</div> <button id="switch" class="btn" style="float:left;margin-left:50px;"onclick="switchit();">Switch to Location-wise</button>
+<div id="ajaxy"></div>
+
+<script>
+    d2="topics_menu";
+    
+    // Ajax request to get the list of all topics
+    jQuery.ajax({
+      type:"POST",
+      url:'/analytics/dash/topics/cweekwise', 
+      success: function(msg) { 
+        if(d2) { 
+          if(d2==':eval') eval(msg); 
+          else jQuery("#" +d2).html(msg); 
+        }  
+      document.getElementById('alltopics').onchange=function(){changetopic(true)};
+      document.getElementById('alltopics').selectedIndex=-1;
+      }
+    });   
+    first=true;
+    d1="ajaxy";
+    switched="";
+
+    // Function is called when topic is changed
+    function changetopic(s){
+      if (!s && first){
+        return;
+      }
+      if (!first)
+        svg.transition().duration(0);
+      first=false;
+      t=document.getElementById('alltopics');
+      var current_state=t.options[t.selectedIndex].value;
+      jQuery.ajax({type:"POST",url:'/analytics/dash/motion/'+encodeURIComponent(current_state)+'/'+switched, success: function(msg) { if(d1) { if(d1==':eval') eval(msg); else jQuery("#" +d1).html(msg); }  }  });
+    } 
+
+    // Function is called when switch button is pressed
+    function switchit(){
+      if (switched.length==0){
+        switched="something";
+        jQuery('#switch').html("Switch to Cluster-wise");
+      }else{
+        switched="";
+        jQuery('#switch').html("Switch to Location-wise");
+      }
+      changetopic(false);
+    }
+</script>
